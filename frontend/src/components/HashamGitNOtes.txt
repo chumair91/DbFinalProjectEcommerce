@@ -1,0 +1,24 @@
+# clone
+git clone https://github.com/umair/umairstore.git
+cd umairstore
+
+# sync
+git checkout develop
+git pull origin develop
+
+# new branch
+git checkout -b feature/your-task
+
+# work -> stage -> commit
+git add .
+git commit -m "feat: short message"
+
+# push branch
+git push -u origin feature/your-task
+
+# update branch later
+git fetch origin
+git merge origin/develop    # or rebase origin/develop
+
+# delete local branch after merge
+git branch -d feature/your-task
