@@ -57,7 +57,13 @@ const placeOrder = async (req, res) => {
     //   "Your ShopSage Order Confirmation",
     //   html
     // );
-    sendEmail(address.email, "Your ShopSage Order Confirmation", html);
+    console.log(address.email);
+    
+    sendEmail({
+    to: address.email,
+    subject: "Your ShopSage Order Confirmation",
+    html: html
+});
     res.json({ success: true, message: "Order Placed and Email sent" });
   } catch (error) {
     console.log(error);
