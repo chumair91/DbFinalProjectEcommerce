@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import { io } from "socket.io-client";
 
-const socket = io("http://localhost:4000"); // Your backend URL
+const socket = io("https://shopsagebackend.onrender.com"); // Your backend URL
 
 export default function AgentPage() {
   const [clients, setClients] = useState([]);
