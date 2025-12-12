@@ -1,48 +1,88 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useMemo } from "react";
 import { io } from "socket.io-client";
 import { FaTimes, FaPaperPlane, FaRobot, FaHeadset } from "react-icons/fa";
-
-const socket = io(import.meta.env.VITE_BACKEND_URL ); // Same as your backend port
 
 export default function ChatPopup({ isOpen, onClose, user }) {
   const [chatMode, setChatMode] = useState("choice"); // "choice", "chatbot", "agent"
   const [messages, setMessages] = useState([]);
   const [inputMsg, setInputMsg] = useState("");
-  const [clientId, setClientId] = useState("");
   const [isConnected, setIsConnected] = useState(false);
   const [noResponseTimeout, setNoResponseTimeout] = useState(null);
   const [chatbotLoading, setChatbotLoading] = useState(true);
   const messagesEndRef = useRef(null);
+  const socketRef = useRef(null);
+  const registeredRef = useRef(false);
+  const clientIdRef = useRef("");
   const NO_RESPONSE_DURATION = 5 * 60 * 1000; // 5 minutes without response
 
-  useEffect(() => {
-    // Generate client ID based on user login status
-    const generateClientId = () => {
+  // Generate and cache client ID once
+  useMemo(() => {
+    if (!clientIdRef.current) {
       if (user && user.email) {
-        return `user_${user._id || user.email}`;
+        clientIdRef.current = `user_${user._id || user.email}`;
       } else {
-        return `guest_${Math.random().toString(36).substr(2, 9)}`;
+        clientIdRef.current = `guest_${Math.random().toString(36).substr(2, 9)}`;
       }
-    };
+      console.log("Generated client ID:", clientIdRef.current);
+    }
+  }, [user]);
 
-    const id = generateClientId();
-    setClientId(id);
+  // Load messages from localStorage when chatMode switches to agent
+  useEffect(() => {
+    if (chatMode === "agent" && clientIdRef.current) {
+      const saved = localStorage.getItem(`chat_${clientIdRef.current}`);
+      if (saved) {
+        try {
+          setMessages(JSON.parse(saved));
+          console.log("Loaded messages from localStorage for", clientIdRef.current);
+        } catch (e) {
+          console.error("Failed to parse saved messages:", e);
+        }
+      }
+    }
+  }, [chatMode]);
+
+  // Save messages to localStorage whenever they change
+  useEffect(() => {
+    if (clientIdRef.current && messages.length > 0) {
+      try {
+        localStorage.setItem(`chat_${clientIdRef.current}`, JSON.stringify(messages));
+        console.log("Saved messages to localStorage");
+      } catch (e) {
+        console.error("Failed to save messages to localStorage:", e);
+      }
+    }
+  }, [messages]);
+
+  // Handle socket events when chatMode changes
+  useEffect(() => {
+    const socket = socketRef.current;
+    if (!socket || !clientIdRef.current) return;
 
     // Only register if chatMode is "agent"
-    if (chatMode !== "agent") return;
+    if (chatMode !== "agent") {
+      registeredRef.current = false;
+      return;
+    }
+
+    // Prevent duplicate registration
+    if (registeredRef.current) return;
 
     // Connection status
     const onConnect = () => {
       setIsConnected(true);
       console.log("Connected to chat server");
       
-      socket.emit("client_register", {
-        clientId: id,
-        userId: user?._id || null,
-        email: user?.email || "guest@example.com",
-        name: user?.name || "Guest User"
-      });
-      console.log("Client registered:", id);
+      if (!registeredRef.current) {
+        socket.emit("client_register", {
+          clientId: clientIdRef.current,
+          userId: user?._id || null,
+          email: user?.email || "guest@example.com",
+          name: user?.name || "Guest User"
+        });
+        registeredRef.current = true;
+        console.log("Client registered:", clientIdRef.current);
+      }
     };
 
     const onDisconnect = () => {
@@ -76,7 +116,7 @@ export default function ChatPopup({ isOpen, onClose, user }) {
       socket.off("connect", onConnect);
       socket.off("disconnect", onDisconnect);
     };
-  }, [user, chatMode, noResponseTimeout]);
+  }, [chatMode]);
 
   const sendMessage = () => {
     if (!inputMsg.trim()) return;
@@ -94,8 +134,8 @@ export default function ChatPopup({ isOpen, onClose, user }) {
 
     setMessages((prev) => [...prev, msgObj]);
 
-    socket.emit("client_message", {
-      clientId,
+    socketRef.current.emit("client_message", {
+      clientId: clientIdRef.current,
       message: inputMsg,
       metadata: {
         userId: user?._id,
@@ -127,17 +167,21 @@ export default function ChatPopup({ isOpen, onClose, user }) {
 
   const handleChooseAgent = () => {
     setChatMode("agent");
-    setMessages([{
-      from: "system",
-      text: "Connecting you to a live agent...",
-      time: Date.now()
-    }]);
+    // Don't clear messages - load from localStorage instead
   };
 
   const handleBackToChoice = () => {
     setChatMode("choice");
-    setMessages([]);
+    // Don't clear messages, keep them saved for next time
     if (noResponseTimeout) clearTimeout(noResponseTimeout);
+  };
+
+  const clearChatHistory = () => {
+    if (clientIdRef.current) {
+      localStorage.removeItem(`chat_${clientIdRef.current}`);
+      setMessages([]);
+      console.log("Cleared chat history");
+    }
   };
 
   const scrollToBottom = () => {
@@ -341,6 +385,20 @@ export default function ChatPopup({ isOpen, onClose, user }) {
               className="bg-green-600 text-white rounded-full w-12 h-12 flex items-center justify-center hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <FaPaperPlane />
+            </button>
+          </div>
+          <div className="flex gap-2 justify-between">
+            <button
+              onClick={handleBackToChoice}
+              className="text-xs text-gray-500 hover:text-gray-700 py-1"
+            >
+              ← Back
+            </button>
+            <button
+              onClick={clearChatHistory}
+              className="text-xs text-red-500 hover:text-red-700 py-1"
+            >
+              Clear History
             </button>
           </div>
           <button

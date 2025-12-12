@@ -1,8 +1,6 @@
 import React, { useEffect, useState, useRef } from "react";
 import { io } from "socket.io-client";
 
-const socket = io(import.meta.env.VITE_BACKEND_URL); // Your backend URL
-
 export default function AgentPage() {
   const [clients, setClients] = useState([]);
   const [selectedClient, setSelectedClient] = useState(null);
@@ -11,16 +9,35 @@ export default function AgentPage() {
   const [agentMsg, setAgentMsg] = useState("");
   const [clientInfo, setClientInfo] = useState({}); // Store client info
   const messagesEndRef = useRef(null);
+  const socketRef = useRef(null);
+  const registeredRef = useRef(false);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
+  // Initialize socket once
   useEffect(() => {
+    if (!socketRef.current) {
+      socketRef.current = io(import.meta.env.VITE_BACKEND_URL);
+    }
+    return () => {
+      // Don't disconnect on unmount, keep connection alive
+    };
+  }, []);
+
+  // Handle socket events - register agent
+  useEffect(() => {
+    const socket = socketRef.current;
+    if (!socket) return;
+
     const onConnect = () => {
       console.log("Agent connected to server");
-      // Register as agent AFTER connection
-      socket.emit("agent_register");
+      // Register as agent AFTER connection, but only once
+      if (!registeredRef.current) {
+        socket.emit("agent_register");
+        registeredRef.current = true;
+      }
     };
 
     const onClientsList = (list) => {
@@ -40,7 +57,10 @@ export default function AgentPage() {
 
     const onChatHistory = ({ clientId, messages, userInfo }) => {
       console.log("Received chat history for", clientId, ":", messages);
-      setMessagesByClient((prev) => ({ ...prev, [clientId]: messages || [] }));
+      const finalMessages = messages || [];
+      setMessagesByClient((prev) => ({ ...prev, [clientId]: finalMessages }));
+      // Save to localStorage
+      localStorage.setItem(`agent_chat_${clientId}`, JSON.stringify(finalMessages));
       if (userInfo) {
         setClientInfo(prev => ({ ...prev, [clientId]: userInfo }));
       }
@@ -60,6 +80,8 @@ export default function AgentPage() {
         }
         const clientMessages = [...existingMessages, message];
         console.log("Updated messages for", clientId, ":", clientMessages);
+        // Save to localStorage
+        localStorage.setItem(`agent_chat_${clientId}`, JSON.stringify(clientMessages));
         return { ...prev, [clientId]: clientMessages };
       });
 
@@ -86,7 +108,27 @@ export default function AgentPage() {
     }
 
     socket.on("clients_list", onClientsList);
-    socket.on("chat_history", onChatHistory);
+    
+    // Load stored messages from localStorage for all clients
+    const loadStoredMessages = () => {
+      setMessagesByClient((prev) => {
+        const updated = { ...prev };
+        clients.forEach((clientId) => {
+          const stored = localStorage.getItem(`agent_chat_${clientId}`);
+          if (stored && !updated[clientId]?.length) {
+            try {
+              updated[clientId] = JSON.parse(stored);
+              console.log("Loaded stored messages for", clientId);
+            } catch (e) {
+              console.error("Failed to parse stored messages for", clientId, e);
+            }
+          }
+        });
+        return updated;
+      });
+    };
+    
+    loadStoredMessages();    socket.on("chat_history", onChatHistory);
     socket.on("new_message", onNewMessage);
 
     return () => {
@@ -110,11 +152,15 @@ export default function AgentPage() {
     const msgObj = { from: "agent", text: agentMsg, time: Date.now() };
 
     // Send to backend
-    socket.emit("agent_message", { clientId: selectedClient, message: agentMsg });
+    socketRef.current.emit("agent_message", { clientId: selectedClient, message: agentMsg });
 
     // Update locally
     setMessagesByClient((prev) => {
       const arr = prev[selectedClient] ? [...prev[selectedClient], msgObj] : [msgObj];
+    // Update locally and save to localStorage
+    setMessagesByClient((prev) => {
+      const arr = prev[selectedClient] ? [...prev[selectedClient], msgObj] : [msgObj];
+      localStorage.setItem(`agent_chat_${selectedClient}`, JSON.stringify(arr));
       return { ...prev, [selectedClient]: arr };
     });
 
@@ -125,6 +171,16 @@ export default function AgentPage() {
   const selectClient = (clientId) => {
     setSelectedClient(clientId);
     setUnreadCount((prev) => ({ ...prev, [clientId]: 0 }));
+    // Load stored messages if available
+    const stored = localStorage.getItem(`agent_chat_${clientId}`);
+    if (stored) {
+      try {
+        const loadedMessages = JSON.parse(stored);
+        setMessagesByClient((prev) => ({ ...prev, [clientId]: loadedMessages }));
+      } catch (e) {
+        console.error("Failed to load stored messages:", e);
+      }
+    }
     setTimeout(scrollToBottom, 50);
   };
 

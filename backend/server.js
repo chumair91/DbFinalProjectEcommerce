@@ -71,16 +71,25 @@ io.on("connection", (socket) => {
     // If user is logged in, use their actual ID
     const finalClientId = userId ? `user_${userId}` : clientId;
     
-    clients[finalClientId] = clients[finalClientId] || { 
+    // Check if client already exists with same socketId (prevent duplicate registrations)
+    if (clients[finalClientId] && clients[finalClientId].socketId === socket.id) {
+      console.log("Client already registered with same socket:", finalClientId);
+      return;
+    }
+    
+    // If client exists but with different socketId, update the socketId
+    // (user reconnected with a new socket)
+    const isReconnect = clients[finalClientId];
+    
+    clients[finalClientId] = { 
       socketId: socket.id, 
-      messages: [],
+      messages: isReconnect ? clients[finalClientId].messages : [],
       userId,
       email,
       name,
       isGuest: !userId
     };
     
-    clients[finalClientId].socketId = socket.id;
     console.log("Client registered:", finalClientId, email);
 
     // notify agents about new/updated client list
