@@ -21,22 +21,7 @@ const HeroCopy = () => {
             scrollTo: "latest-collection"
         }
     ]
-    // const handleScroll = (e) => {
-    //     console.log(e.target.innerText.trim().toLowerCase());
-        
-    //     let value = e.target.innerText.trim().toLowerCase();
-    //     if (value.includes('shop')) {
-    //         window.scrollTo({
-    //             top: window.scrollY + 1500, // Current position + 500px
-    //             behavior: 'smooth'
-    //         });
-    //     } else if (value.includes('explore')) {
-    //         window.scrollTo({
-    //             top: window.scrollY + 650, // Current position + 500px
-    //             behavior: 'smooth'
-    //         });
-    //     }
-    // }
+
 
     const handleScroll = (e) => {
     console.log(e.target.innerText.trim().toLowerCase());
@@ -66,7 +51,7 @@ const HeroCopy = () => {
         slidesToScroll: 1,
         autoplay: true,
         autoplaySpeed: 3000,
-        arrows: true
+        arrows: false
     }
 
     return (
