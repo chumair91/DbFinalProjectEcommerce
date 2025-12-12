@@ -27,6 +27,16 @@ export default function ChatPopup({ isOpen, onClose, user }) {
     }
   }, [user]);
 
+  // Initialize socket once
+  useEffect(() => {
+    if (!socketRef.current) {
+      socketRef.current = io(import.meta.env.VITE_BACKEND_URL);
+    }
+    return () => {
+      // Don't disconnect on unmount, keep connection alive for multiple chats
+    };
+  }, []);
+
   // Load messages from localStorage when chatMode switches to agent
   useEffect(() => {
     if (chatMode === "agent" && clientIdRef.current) {
@@ -121,9 +131,9 @@ export default function ChatPopup({ isOpen, onClose, user }) {
   const sendMessage = () => {
     if (!inputMsg.trim()) return;
     
-    // Check if socket is ready
-    if (!socketRef.current || !isConnected) {
-      console.warn("Socket not connected yet");
+    // Check if socket exists (it will queue messages if not yet connected)
+    if (!socketRef.current) {
+      console.warn("Socket not initialized yet");
       return;
     }
 
@@ -384,14 +394,14 @@ export default function ChatPopup({ isOpen, onClose, user }) {
               value={inputMsg}
               onChange={(e) => setInputMsg(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
-              placeholder={isConnected ? "Type your message..." : "Connecting..."}
-              disabled={!isConnected}
-              className="flex-1 border rounded-full px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:bg-gray-100 disabled:text-gray-500"
+              placeholder="Type your message..."
+              className="flex-1 border rounded-full px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-500"
             />
             <button
               onClick={sendMessage}
-              disabled={!inputMsg.trim() || !isConnected}
+              disabled={!inputMsg.trim()}
               className="bg-green-600 text-white rounded-full w-12 h-12 flex items-center justify-center hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              title={isConnected ? "Send message" : "Connecting..."}
             >
               <FaPaperPlane />
             </button>
