@@ -148,15 +148,18 @@ export default function AgentPage() {
 
   const sendReply = () => {
     if (!agentMsg.trim() || !selectedClient) return;
+    
+    // Check if socket is ready
+    if (!socketRef.current) {
+      console.warn("Socket not connected yet");
+      return;
+    }
 
     const msgObj = { from: "agent", text: agentMsg, time: Date.now() };
 
     // Send to backend
     socketRef.current.emit("agent_message", { clientId: selectedClient, message: agentMsg });
 
-    // Update locally
-    setMessagesByClient((prev) => {
-      const arr = prev[selectedClient] ? [...prev[selectedClient], msgObj] : [msgObj];
     // Update locally and save to localStorage
     setMessagesByClient((prev) => {
       const arr = prev[selectedClient] ? [...prev[selectedClient], msgObj] : [msgObj];
@@ -184,6 +187,46 @@ export default function AgentPage() {
     setTimeout(scrollToBottom, 50);
   };
 
+  const deleteChat = (clientId) => {
+    if (window.confirm(`Are you sure you want to delete the chat with ${clientInfo[clientId]?.name || clientId}?`)) {
+      // Remove from clients list
+      setClients((prev) => prev.filter((c) => c !== clientId));
+      
+      // Remove messages for this client
+      setMessagesByClient((prev) => {
+        const updated = { ...prev };
+        delete updated[clientId];
+        return updated;
+      });
+      
+      // Remove client info
+      setClientInfo((prev) => {
+        const updated = { ...prev };
+        delete updated[clientId];
+        return updated;
+      });
+      
+      // Remove from unread count
+      setUnreadCount((prev) => {
+        const updated = { ...prev };
+        delete updated[clientId];
+        return updated;
+      });
+      
+      // Clear localStorage
+      localStorage.removeItem(`agent_chat_${clientId}`);
+      
+      // Clear selection if this was the selected client
+      if (selectedClient === clientId) {
+        setSelectedClient(null);
+      }
+      
+      // Emit delete event to server
+      socketRef.current.emit("delete_client_chat", { clientId });
+      console.log("Chat deleted for client:", clientId);
+    }
+  };
+
   return (
     <div className="flex h-screen bg-gray-50">
       {/* Sidebar */}
@@ -202,11 +245,11 @@ export default function AgentPage() {
                 onClick={() => selectClient(clientId)}
               >
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center">
+                  <div className="flex items-center flex-1">
                     <div className="w-10 h-10 rounded-full bg-green-500 flex items-center justify-center text-white font-bold">
                       {clientInfo[clientId]?.name?.charAt(0) || clientId.charAt(0).toUpperCase()}
                     </div>
-                    <div className="ml-3">
+                    <div className="ml-3 flex-1">
                       <div className="font-medium text-gray-800">
                         {clientInfo[clientId]?.name || 'Guest User'}
                       </div>
@@ -215,11 +258,23 @@ export default function AgentPage() {
                       </div>
                     </div>
                   </div>
-                  {unreadCount[clientId] > 0 && (
-                    <span className="bg-red-500 text-white text-xs rounded-full w-6 h-6 flex items-center justify-center">
-                      {unreadCount[clientId]}
-                    </span>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {unreadCount[clientId] > 0 && (
+                      <span className="bg-red-500 text-white text-xs rounded-full w-6 h-6 flex items-center justify-center">
+                        {unreadCount[clientId]}
+                      </span>
+                    )}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        deleteChat(clientId);
+                      }}
+                      className="text-red-500 hover:text-red-700 text-lg px-2 py-1"
+                      title="Delete chat"
+                    >
+                      ✕
+                    </button>
+                  </div>
                 </div>
                 <div className="ml-13 mt-1 text-sm text-gray-600 truncate">
                   {messagesByClient[clientId]?.slice(-1)[0]?.text || "No messages yet"}

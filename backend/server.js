@@ -156,6 +156,15 @@ io.on("connection", (socket) => {
     console.log(`Agent -> ${clientId}:`, message);
   });
 
+  // Agent deletes a client chat
+  socket.on("delete_client_chat", ({ clientId }) => {
+    if (clients[clientId]) {
+      console.log("Deleting chat for client:", clientId);
+      delete clients[clientId];
+      broadcastClientsList();
+    }
+  });
+
   // Handle disconnects
   socket.on("disconnect", () => {
     console.log("Socket disconnected:", socket.id);

@@ -120,6 +120,12 @@ export default function ChatPopup({ isOpen, onClose, user }) {
 
   const sendMessage = () => {
     if (!inputMsg.trim()) return;
+    
+    // Check if socket is ready
+    if (!socketRef.current || !isConnected) {
+      console.warn("Socket not connected yet");
+      return;
+    }
 
     const msgObj = {
       from: "client",
@@ -144,6 +150,8 @@ export default function ChatPopup({ isOpen, onClose, user }) {
       }
     });
 
+    // Clear input immediately after sending
+    const tempMsg = inputMsg;
     setInputMsg("");
     scrollToBottom();
     
@@ -376,12 +384,13 @@ export default function ChatPopup({ isOpen, onClose, user }) {
               value={inputMsg}
               onChange={(e) => setInputMsg(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
-              placeholder="Type your message..."
-              className="flex-1 border rounded-full px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-500"
+              placeholder={isConnected ? "Type your message..." : "Connecting..."}
+              disabled={!isConnected}
+              className="flex-1 border rounded-full px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:bg-gray-100 disabled:text-gray-500"
             />
             <button
               onClick={sendMessage}
-              disabled={!inputMsg.trim()}
+              disabled={!inputMsg.trim() || !isConnected}
               className="bg-green-600 text-white rounded-full w-12 h-12 flex items-center justify-center hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <FaPaperPlane />
