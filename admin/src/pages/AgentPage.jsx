@@ -234,7 +234,7 @@ export default function AgentPage() {
         <div className="p-4 bg-green-600 text-white font-bold text-center">
           Active Chats ({clients.length})
         </div>
-        <div className="overflow-y-auto flex-1">
+        <div className="overflow-y-auto flex-1 scrollbar-hide">
           {clients.length === 0 ? (
             <div className="p-4 text-gray-500 text-center">No active chats</div>
           ) : (
@@ -308,7 +308,7 @@ export default function AgentPage() {
             </div>
 
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-4 bg-gray-100">
+            <div className="max-h-[380px] flex-1 overflow-y-auto p-4 bg-gray-100 scrollbar-hide">
               {messagesByClient[selectedClient]?.map((msg, i) => (
                 <div key={i} className={`flex mb-4 ${msg.from === "agent" ? "justify-end" : "justify-start"}`}>
                   <div className={`max-w-[70%] rounded-2xl px-4 py-2 ${msg.from === "agent" ? "bg-green-100" : "bg-white"}`}>
