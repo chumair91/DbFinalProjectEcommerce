@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from "react";
 import { io } from "socket.io-client";
 import { FaTimes, FaPaperPlane, FaRobot, FaHeadset } from "react-icons/fa";
 
-const socket = io("http://localhost:4000"); // Same as your backend port
+const socket = io(import.meta.env.VITE_BACKEND_URL ); // Same as your backend port
 
 export default function ChatPopup({ isOpen, onClose, user }) {
   const [chatMode, setChatMode] = useState("choice"); // "choice", "chatbot", "agent"

@@ -92,7 +92,7 @@ const Orders = () => {
                   <p>Quantity: {item.quantity}</p>
                   <p>Size: {item.size}</p>
                 </div>
-                <p className='mt-1'>Date: <span className='text-gray-400'>{ new Date(item.date).toDateString()}</span></p>
+                <p className='mt-1'>Date: <span className='text-gray-400'>{new Date(item.date).toDateString()}</span></p>
                 <p className='mt-1'>Payment: <span className='text-gray-400'>{item.paymentMethod}</span></p>
               </div>
             </div>
@@ -102,9 +102,9 @@ const Orders = () => {
                 <p className='min-w-2 h-2 bg-green-500 rounded-full'></p>
                 <p className='text-sm md:text-base'>{item.status}</p>
               </div>
-              <button onClick={()=>{
+              <button onClick={() => {
                 loadOrderData(),
-                toast.success("Order Status Updated")
+                  toast.success("Order Status Updated")
               }} className='border px-4 py-2 text-sm font-medium rounded-sm'>Track Order</button>
             </div>
           </div>
