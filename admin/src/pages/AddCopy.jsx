@@ -41,7 +41,7 @@ const AddCopy = ({ token }) => {
       formData.append("price", price);
       formData.append("category", category);
       formData.append("subCategory", subCategory);
-      formData.append("bestSeller", bestseller);
+      formData.append("bestseller", bestseller);
       formData.append("sizes", JSON.stringify(sizes));
       image1 && formData.append("image1", image1)
       image2 && formData.append("image2", image2)
