@@ -19,6 +19,9 @@ const Orders = ({ token }) => {
       const res = await axios.post(backendUrl + '/api/order/list', {}, { headers: { token } })
       // console.log(res.data);
       if (res.data.success) {
+
+        console.log(res.data.orders);
+
         setOrders(res.data.orders.reverse())
       } else {
         console.log(res.data.message);
@@ -30,6 +33,10 @@ const Orders = ({ token }) => {
       toast.error(error.message)
 
     }
+  }
+  const sendEmail = (e) => {
+    console.log(e);
+
   }
 
   const statusHandler = async (e, orderId) => {
@@ -48,15 +55,15 @@ const Orders = ({ token }) => {
   }
 
   //this is just a patch ,later we will use socket.io to get realtime updates
-useEffect(() => {
-  fetchAllOrders();   
-
-  const interval = setInterval(() => {
+  useEffect(() => {
     fetchAllOrders();
-  }, 3000);
 
-  return () => clearInterval(interval);
-}, [token]);
+    const interval = setInterval(() => {
+      fetchAllOrders();
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [token]);
 
 
   return (
@@ -91,7 +98,10 @@ useEffect(() => {
                 <p>Date: {new Date(order.date).toLocaleDateString()}</p>
               </div>
               <p className='text-sm sm:text-[15px]'>{currency}{' '}{order.amount}</p>
-              <select className='p-2 text-sm border border-gray-300 rounded-md  bg-transparent focus:outline-none focus:ring-2 focus:ring-black/30 focus:border-black transition' onChange={(e) => statusHandler(e, order._id)} value={order.status} >
+              <select className='p-2 text-sm border border-gray-300 rounded-md  bg-transparent focus:outline-none focus:ring-2 focus:ring-black/30 focus:border-black transition' onChange={(e) => {
+                statusHandler(e, order._id),
+                  sendEmail(order.address.email)
+              }} value={order.status} >
                 <option value="Order Placed">Order Placed</option>
                 <option value="Packing">Packing</option>
                 <option value="Shipped">Shipped</option>
